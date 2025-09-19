@@ -34,7 +34,7 @@
     /* --- RESPONSIVE: móvil --- */
     @media (max-width: 600px) {
       #characters {
-        flex-direction: column; /* imágenes verticales */
+        flex-direction: column;
         gap: 15px;
         align-items: center;
       }
@@ -59,6 +59,15 @@
   const container = document.getElementById("gameContainer");
   let username = localStorage.getItem("username");
 
+  // Mapping de personajes a GIFs
+  const characterGifs = {
+    "Peron": "https://i.giphy.com/KbAj5yM9zzZRvX0YBn.webp",
+    "Milei": "https://media.tenor.com/Wcpxt4b9aLUAAAAM/milei-javier-milei.gif",
+    "kicillof": "https://media.tenor.com/UH-OX_1X8ZwAAAAM/axel-axel-kicillof.gif",
+    "cristina": "https://media.tenor.com/bU60bEqgnSIAAAAM/cfk-cristina.gif",
+    "alex": "https://media.tenor.com/0g_y8KH3KBAAAAAM/hijole-alex-caniggia.gif"
+  };
+
   if (!username) {
     // --- LOGIN ---
     const loginDiv = document.createElement("div");
@@ -74,9 +83,8 @@
              alt="Kicillof" class="character" data-character="kicillof">
         <img src="https://media.tenor.com/bU60bEqgnSIAAAAM/cfk-cristina.gif" 
              alt="Cristina" class="character" data-character="cristina">
-             <img src="https://media.tenor.com/0g_y8KH3KBAAAAAM/hijole-alex-caniggia.gif" 
-             alt="Cristina" class="character" data-character="alex">
-             
+        <img src="https://media.tenor.com/0g_y8KH3KBAAAAAM/hijole-alex-caniggia.gif" 
+             alt="Alex" class="character" data-character="alex">
       </div>
       <input type="text" id="loginUser" placeholder="Usuario">
       <button id="loginBtn">Ingresar</button>
@@ -118,9 +126,11 @@
     const socket = io();
     socket.emit("register-user", username);
 
+    const myCharacter = localStorage.getItem("character");
+
     container.innerHTML = `
       <div class="container">
-        <h1>PeronPlanning - ${username}</h1>
+        <h1>PeronPlanning - ${username} </h1>
         <div id="usersList"><strong>Usuarios conectados:</strong> ...</div>
         <div id="playersContainer"></div>
         <button id="showResults">Revelar Resultados</button>
@@ -133,21 +143,36 @@
     const playersContainer = document.getElementById("playersContainer");
     const resultDiv = document.getElementById("result");
 
-    socket.on("users-list", users => usersListDiv.innerHTML = `<strong>Usuarios conectados:</strong> ${users.join(", ")}`);
+    // Guardar personajes de usuarios (solo frontend, por defecto los demás no tienen GIF)
+    const userCharacters = {};
+    userCharacters[username] = myCharacter;
+
+    function renderUsersList(users) {
+      usersListDiv.innerHTML = `<strong>Usuarios conectados:</strong> ${users.map(u => {
+        const gif = characterGifs[userCharacters[u]] || "";
+        return gif ? `<img src="${gif}" style="width:30px;height:30px;vertical-align:middle;border-radius:5px;margin-right:5px;"> ${u}` : u;
+      }).join(", ")}`;
+    }
+
+    socket.on("users-list", users => renderUsersList(users));
     socket.on("new-user", newUser => {
-      const current = usersListDiv.textContent.split(":")[1]?.trim() || "";
-      usersListDiv.innerHTML = `<strong>Usuarios conectados:</strong> ${current ? current + ", " + newUser : newUser}`;
+      // Por ahora asignamos un GIF vacío, hasta que el usuario logueado cargue el suyo
+      userCharacters[newUser] = ""; 
+      const currentUsers = usersListDiv.textContent.split(":")[1]?.trim().split(", ") || [];
+      renderUsersList([...currentUsers, newUser]);
     });
     socket.on("user-left", leftUser => {
-      const current = usersListDiv.textContent.split(":")[1]?.trim().split(", ") || [];
-      const updated = current.filter(u => u !== leftUser);
-      usersListDiv.innerHTML = `<strong>Usuarios conectados:</strong> ${updated.join(", ")}`;
+      delete userCharacters[leftUser];
+      const currentUsers = usersListDiv.textContent.split(":")[1]?.trim().split(", ") || [];
+      const updated = currentUsers.filter(u => u !== leftUser);
+      renderUsersList(updated);
     });
 
     document.getElementById("logoutBtn").addEventListener("click", async () => {
       try { await fetch("/logout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username }) }); }
       catch(err) { console.error(err); }
       localStorage.removeItem("username");
+      localStorage.removeItem("character");
       location.reload();
     });
 
