@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PeronPlanning</title>
   <style>
     body { font-family: Arial,sans-serif; background:#f0f0f0; display:flex; justify-content:center; padding:20px; }
@@ -29,6 +30,25 @@
     #result { text-align:center; margin-top:20px; font-weight:bold; }
     #logoutBtn { display:block; margin:10px auto; padding:5px 15px; cursor:pointer; }
     #usersList { text-align:center; margin-bottom:20px; }
+
+    /* --- RESPONSIVE: móvil --- */
+    @media (max-width: 600px) {
+      #characters {
+        flex-direction: column; /* imágenes verticales */
+        gap: 15px;
+        align-items: center;
+      }
+      .character { width: 120px; }
+      #loginDiv input, #loginDiv button {
+        width: 100%;
+        margin: 5px 0;
+        box-sizing: border-box;
+      }
+      .container { width: 95%; padding: 15px; }
+      .cards { justify-content: center; gap: 5px; }
+      .card { width: 50px; height: 70px; }
+      .card-front, .card-back { width:50px; height:70px; font-size:1em; }
+    }
   </style>
 </head>
 <body>
@@ -50,10 +70,12 @@
              alt="Ryu" class="character" data-character="Peron">
         <img src="https://media.tenor.com/Wcpxt4b9aLUAAAAM/milei-javier-milei.gif" 
              alt="Milei" class="character" data-character="Milei">
-             <img src="https://media.tenor.com/UH-OX_1X8ZwAAAAM/axel-axel-kicillof.gif" 
-             alt="Milei" class="character" data-character="kicillof">
-             <img src="https://media.tenor.com/bU60bEqgnSIAAAAM/cfk-cristina.gif" 
-             alt="Milei" class="character" data-character="kicillof">
+        <img src="https://media.tenor.com/UH-OX_1X8ZwAAAAM/axel-axel-kicillof.gif" 
+             alt="Kicillof" class="character" data-character="kicillof">
+        <img src="https://media.tenor.com/bU60bEqgnSIAAAAM/cfk-cristina.gif" 
+             alt="Cristina" class="character" data-character="cristina">
+             <img src="https://media.tenor.com/0g_y8KH3KBAAAAAM/hijole-alex-caniggia.gif" 
+             alt="Cristina" class="character" data-character="alex">
              
       </div>
       <input type="text" id="loginUser" placeholder="Usuario">
@@ -63,25 +85,19 @@
     container.appendChild(loginDiv);
 
     let selectedCharacter = null;
-
-    // Hacer los GIFs botones
     document.querySelectorAll('.character').forEach(img => {
       img.addEventListener('click', () => {
         selectedCharacter = img.dataset.character;
-        // Quitar borde a todos
         document.querySelectorAll('.character').forEach(i => i.style.border = '2px solid transparent');
-        // Agregar borde al seleccionado
         img.style.border = '3px solid gold';
       });
     });
 
-    // Botón de login
     document.getElementById("loginBtn").addEventListener("click", async () => {
       const input = document.getElementById("loginUser").value.trim();
       const msgDiv = document.getElementById("loginMsg");
       if (!input) { msgDiv.textContent = "Ingrese un usuario válido"; return; }
       if (!selectedCharacter) { msgDiv.textContent = "Seleccione un personaje"; return; }
-
       try {
         const res = await fetch("/login", {
           method: "POST",
@@ -93,12 +109,8 @@
           localStorage.setItem("username", data.username);
           localStorage.setItem("character", selectedCharacter);
           location.reload();
-        } else {
-          msgDiv.textContent = data.message || "Error en login";
-        }
-      } catch {
-        msgDiv.textContent = "Error de conexión al servidor";
-      }
+        } else { msgDiv.textContent = data.message || "Error en login"; }
+      } catch { msgDiv.textContent = "Error de conexión al servidor"; }
     });
 
   } else {
@@ -121,7 +133,6 @@
     const playersContainer = document.getElementById("playersContainer");
     const resultDiv = document.getElementById("result");
 
-    // Socket.io en tiempo real
     socket.on("users-list", users => usersListDiv.innerHTML = `<strong>Usuarios conectados:</strong> ${users.join(", ")}`);
     socket.on("new-user", newUser => {
       const current = usersListDiv.textContent.split(":")[1]?.trim() || "";
@@ -140,7 +151,6 @@
       location.reload();
     });
 
-    // --- Datos del juego (Poker Planning) ---
     const values = [1,2,3,5,8,"?"];
     const players = [""];
     const votes = {};
